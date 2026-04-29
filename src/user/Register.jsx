@@ -1,143 +1,102 @@
-import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useState, useEffect } from "react";
+import { auth, db } from "../firebase"; // Path check kar lena
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // Firestore functions
-import { auth, db } from "../firebase"; // Firebase setup imports
+import { doc, setDoc } from "firebase/firestore";
 import { useNavigate, NavLink } from "react-router-dom";
+import { toast } from "react-toastify";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
-// Redux Actions
-import {
-  registerStart,
-  registerSuccess,
-  registerFail
-} from "../Redux/store";
-
-const Register = () => {
-  const dispatch = useDispatch();
-  const nav = useNavigate();
-  
-  
- // ✅ Sahi (Sirf loading aur error nikaalein)
-const loading = useSelector((state) => state.loading);
-const error = useSelector((state) => state.error);
-
+export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const nav = useNavigate();
+
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
 
   const handleRegister = async (e) => {
     e.preventDefault();
-
-    // Basic Validation
-    if (password !== confirmPassword) {
-      return dispatch(registerFail("Passwords do not match!"));
-    }
-
-    dispatch(registerStart());
+    setLoading(true);
 
     try {
-      // 1. Firebase Auth mein user account create karein
-      const res = await createUserWithEmailAndPassword(auth, email, password);
-      const user = res.user;
+      // 1. Firebase Auth se user create karein
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      // 2. Firestore mein user ka role "user" save karein
-      // Collection: 'users', Document ID: user.uid
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        email: user.email,
-        role: "user", // Default role
-        createdAt: new Date().toISOString()
-      });
-
+      // 2. Firestore mein user ka role set karein (By default "user")
       const userData = {
         uid: user.uid,
         email: user.email,
-        role: "user"
+        role: "user", // 👈 Ye sabse important hai ProtectedRoute ke liye
+        createdAt: new Date().toISOString(),
       };
 
-      // 3. Redux update karein aur Home par bhejein
-      dispatch(registerSuccess(userData));
-      nav("/"); 
+      await setDoc(doc(db, "users", user.uid), userData);
 
-    } catch (err) {
-      // Firebase specific errors ko handle karein
-      dispatch(registerFail(err.message));
-      console.error("Registration Error:", err.message);
+      // 3. LocalStorage mein save karein taaki ProtectedRoute turant access de de
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      toast.success("Account Created Successfully! 🎉");
+      nav("/"); // Home par bhej do
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 px-4">
-      <form
-        onSubmit={handleRegister}
-        className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6 border border-gray-700"
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
+      <div 
+        data-aos="zoom-in" 
+        className="max-w-md w-full bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700"
       >
-        <h2 className="text-3xl font-bold text-center text-white">
-          Create Account
-        </h2>
-
-        {/* Error Message Display */}
-        {error && (
-          <p className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg text-sm text-center">
-            {error}
-          </p>
-        )}
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-gray-300 text-sm block mb-1">Email Address</label>
-            <input
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="text-gray-300 text-sm block mb-1">Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="text-gray-300 text-sm block mb-1">Confirm Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
-              required
-            />
-          </div>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-extrabold text-white">Join <span className="text-blue-500">QuizPro</span></h2>
+          <p className="text-slate-400 mt-2">Create your account to start playing</p>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? "Registering..." : "Register"}
-        </button>
+        <form onSubmit={handleRegister} className="space-y-6">
+          <div>
+            <label className="text-sm font-semibold text-slate-300 ml-1">Email Address</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full mt-1 p-4 bg-slate-700 text-white border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              placeholder="name@example.com"
+            />
+          </div>
 
-        <p className="text-center text-gray-400 text-sm">
+          <div>
+            <label className="text-sm font-semibold text-slate-300 ml-1">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full mt-1 p-4 bg-slate-700 text-white border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            disabled={loading}
+            className="w-full py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {loading ? "Creating Account..." : "Create Account"}
+          </button>
+        </form>
+
+        <p className="text-center text-slate-400 mt-8 text-sm">
           Already have an account?{" "}
-          <NavLink to="/login" className="text-blue-400 hover:underline">
-            Login here
-          </NavLink>
+          <NavLink to="/login" className="text-blue-500 font-bold hover:underline">Log in</NavLink>
         </p>
-      </form>
+      </div>
     </div>
   );
-};
-
-export default Register;
+}

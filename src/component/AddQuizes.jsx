@@ -1,92 +1,64 @@
 import React, { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase"; // path check kar lena
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
+import { toast } from "react-toastify";
 
-export default function AddQuizAdmin() {
+export default function AddQuizes() {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
-  const [answer, setAnswer] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [category, setCategory] = useState(""); // Naya field
   const [loading, setLoading] = useState(false);
 
-  const handleOptionChange = (index, value) => {
-    const updatedOptions = [...options];
-    updatedOptions[index] = value;
-    setOptions(updatedOptions);
-  };
-
-  const submitHandler = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!question || options.some(opt => opt === "") || !answer) {
-      alert("All fields are required");
-      return;
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
-
       await addDoc(collection(db, "quizzes"), {
         question,
         options,
-        correctAnswer: answer,
-        createdAt: serverTimestamp(),
-        createdBy: "admin",
+        correctAnswer,
+        category: category.trim() || "General", // Default 'General'
+        createdAt: new Date()
       });
-
-      alert("Quiz added successfully ✅");
-
-      // reset
-      setQuestion("");
-      setOptions(["", "", "", ""]);
-      setAnswer("");
-    } catch (err) {
-      console.error(err);
-      alert("Error adding quiz ❌");
-    } finally {
-      setLoading(false);
-    }
+      toast.success("Quiz added!");
+      setQuestion(""); setOptions(["", "", "", ""]); setCorrectAnswer(""); setCategory("");
+    } catch (err) { toast.error("Error!"); }
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 bg-gray-900 text-white p-6 rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        Admin Panel – Add Quiz
-      </h2>
-
-      <form onSubmit={submitHandler} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Enter Question"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          className="w-full p-3 rounded bg-gray-700"
+    <div className="max-w-xl mx-auto bg-black p-6 rounded-lg shadow-md border">
+      <h2 className="text-2xl font-bold mb-4">Add New Quiz</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input 
+          type="text" placeholder="Category (e.g. React, JS)" 
+          value={category} onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-2 border rounded"
         />
-
+        <textarea 
+          placeholder="Question" value={question} 
+          onChange={(e) => setQuestion(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
         {options.map((opt, i) => (
-          <input
-            key={i}
-            type="text"
-            placeholder={`Option ${i + 1}`}
-            value={opt}
-            onChange={(e) => handleOptionChange(i, e.target.value)}
-            className="w-full p-3 rounded bg-gray-700"
+          <input 
+            key={i} type="text" placeholder={`Option ${i+1}`}
+            value={opt} onChange={(e) => {
+              let newOpt = [...options]; newOpt[i] = e.target.value; setOptions(newOpt);
+            }}
+            className="w-full p-2 border rounded"
           />
         ))}
-
-        <input
-          type="text"
-          placeholder="Correct Answer"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          className="w-full p-3 rounded bg-green-700"
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold"
+        <select 
+          value={correctAnswer} onChange={(e) => setCorrectAnswer(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-50"
         >
-          {loading ? "Saving..." : "Add Quiz"}
+          <option value="">Select Correct Answer</option>
+          {options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+        </select>
+        <button className="w-full bg-blue-600 text-white p-2 rounded font-bold">
+          {loading ? "Saving..." : "Save Question"}
         </button>
       </form>
     </div>

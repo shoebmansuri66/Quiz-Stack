@@ -10,7 +10,7 @@ export default function Navbars() {
       : "text-gray-200 hover:text-white";
 
   return (
-    <nav className="w-full bg-gray-900 text-white px-6 py-4 flex items-center justify-between">
+    <nav className="w-full bg-gray-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       {/* Left links */}
       <div className="flex gap-6">
         <NavLink to="/" className={linkClass}>  Home </NavLink>

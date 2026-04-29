@@ -1,22 +1,15 @@
-import { useSelector } from "react-redux";
+
+import React from "react";
 import { Navigate } from "react-router-dom";
 
-export default function AdminProtectedRoute({ children }) {
-  const { user } = useSelector(state => state);
-  
-  // Check if user is logged in AND is an admin
-  if (!user) return <Navigate to="/admin-login" />;
-  if (user.role !== "admin") return <Navigate to="/" />; // Redirect non-admins to home
+export default function ProtectedUserRoute({ children }) {
+  // LocalStorage se user uthayenge kyunki refresh par Redux khaali ho jata hai
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (!user) {
+    // Agar login nahi hai, toh login page par bhej do
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 }
-// import { useSelector } from "react-redux";
-// import { Navigate } from "react-router-dom";
-
-// export default function ProtectedUserRoute({ children }) {
-//   const { user } = useSelector(state => state);
-
-//   if (!user) return <Navigate to="/login" />;
-
-//   return children;
-// }
